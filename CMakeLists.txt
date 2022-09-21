@@ -162,7 +162,7 @@ FetchContent_MakeAvailable(Kuku)
     # else()
     message(STATUS "Flatbuffers: found")
     # get_target_property(FLATBUFFERS_FLATC_PATH flatbuffers::flatc IMPORTED_LOCATION_RELEASE)
-    set(FLATBUFFERS_FLATC_PATH "/usr/local/bin/flatc")
+    set(FLATBUFFERS_FLATC_PATH "/opt/homebrew/bin/flatc")
     message(STATUS "flatc path: ${FLATBUFFERS_FLATC_PATH}")
     include(CompileSchemaCXX)
 # endif()
@@ -198,23 +198,23 @@ endif()
 set(APSI_USE_ZMQ_OPTION_STR "Use ZeroMQ for networking")
 option(APSI_USE_ZMQ ${APSI_USE_ZMQ_OPTION_STR} ON)
 # set(APSI_USE_ZMQ OFF)
-# if(APSI_USE_ZMQ)
-#     list (APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_LIST_DIR})
-#     # ZeroMQ base
-#     find_package(ZeroMQ REQUIRED)
-#     if(NOT ZeroMQ_FOUND)
-#         message(FATAL_ERROR "ZeroMQ: not found")
-#     else()
-#         message(STATUS "ZeroMQ: found")
-#     endif()
-#     # cppzmq wrapper
-#     find_package(cppzmq REQUIRED)
-#     if(NOT cppzmq_FOUND)
-#         message(FATAL_ERROR "cppzmq: not found")
-#     else()
-#         message(STATUS "cppzmq: found")
-#     endif()
-# endif()
+if(APSI_USE_ZMQ)
+    list (APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_LIST_DIR})
+    # ZeroMQ base
+    find_package(ZeroMQ REQUIRED)
+    if(NOT ZeroMQ_FOUND)
+        message(FATAL_ERROR "ZeroMQ: not found")
+    else()
+        message(STATUS "ZeroMQ: found")
+    endif()
+    # cppzmq wrapper
+    find_package(cppzmq REQUIRED)
+    if(NOT cppzmq_FOUND)
+        message(FATAL_ERROR "cppzmq: not found")
+    else()
+        message(STATUS "cppzmq: found")
+    endif()
+endif()
 
 # [Option] APSI_BUILD_TESTS (default: OFF)
 set(APSI_BUILD_TESTS_OPTION_STR "Build unit and integration tests for APSI")
@@ -232,7 +232,7 @@ endif()
 # [Option] APSI_BUILD_CLI (default: OFF)
 set(APSI_BUILD_CLI_OPTION_STR "Build example command line interface applications")
 cmake_dependent_option(APSI_BUILD_CLI ${APSI_BUILD_CLI_OPTION_STR} OFF "APSI_USE_ZMQ;APSI_USE_LOG4CPLUS" OFF)
-set(APSI_BUILD_CLI OFF)
+set(APSI_BUILD_CLI ON)
 if (APSI_BUILD_CLI)
     # TCLAP
     find_path(TCLAP_INCLUDE_DIRS "tclap/Arg.h")
@@ -251,11 +251,11 @@ endif()
 # [option] BUILD_SHARED_LIBS (default: OFF)
 # Build a shared library if set to ON. Build a static library regardlessly.
 set(BUILD_SHARED_LIBS_STR "Build shared library")
-option(BUILD_SHARED_LIBS ${BUILD_SHARED_LIBS_STR} OFF)
+option(BUILD_SHARED_LIBS ${BUILD_SHARED_LIBS_STR} ON)
 # TODO: consider building shared in future
-if(BUILD_SHARED_LIBS)
-    message(FATAL_ERROR "Only static build is supported; set `BUILD_SHARED_LIBS=OFF`")
-endif()
+# if(BUILD_SHARED_LIBS)
+#     message(FATAL_ERROR "Only static build is supported; set `BUILD_SHARED_LIBS=OFF`")
+# endif()
 
 # Create the config file
 configure_file(${APSI_CONFIG_H_IN_FILENAME} ${APSI_CONFIG_H_FILENAME})
@@ -263,18 +263,18 @@ install(
     FILES ${APSI_CONFIG_H_FILENAME}
     DESTINATION ${APSI_INCLUDES_INSTALL_DIR}/apsi)
 
+link_directories(
+    /Users/chb/Projects/deps/APSI/build/lib
+)
+
 # Create a single library "apsi" for common, sender, and receiver
-add_library(apsi STATIC)
+add_library(apsi SHARED)
 apsi_set_version_filename(apsi)
 apsi_set_language(apsi)
-# target_include_directories(apsi PUBLIC
-#     $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/common>
-#     $<INSTALL_INTERFACE:${APSI_INCLUDES_INSTALL_DIR}>
-#     /opt/homebrew/Cellar/flatbuffers/2.0.6/include/)
 target_include_directories(apsi PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/common>
     $<INSTALL_INTERFACE:${APSI_INCLUDES_INSTALL_DIR}>
-    /home/linuxbrew/.linuxbrew/include/)
+    /opt/homebrew/Cellar/flatbuffers/2.0.7/include/)
 target_include_directories(apsi PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/sender>
     $<INSTALL_INTERFACE:${APSI_INCLUDES_INSTALL_DIR}>)
@@ -304,8 +304,7 @@ if(APSI_USE_LOG4CPLUS)
     target_link_libraries(apsi PUBLIC log4cplus::log4cplus)
 endif()
 if(APSI_USE_ZMQ)
-    # target_link_libraries(apsi PUBLIC zmq cppzmq)
-    target_link_libraries(apsi PUBLIC zmq)
+    target_link_libraries(apsi PUBLIC libzmq cppzmq)
 endif()
 
 # Configurations for FourQlib: system, arch, SIMD, and assembler
@@ -314,13 +313,14 @@ target_compile_options(apsi PUBLIC -DUSE_SECURE_SEED)
 target_compile_options(apsi PUBLIC -DUSE_ENDO=true)
 
 # Set system
-if(MSVC)
-    target_compile_options(apsi PUBLIC -D__WINDOWS__)
-elseif (UNIX)
+# if(MSVC)
+    # target_compile_options(apsi PUBLIC -D__WINDOWS__)
+# elseif (UNIX)
     target_compile_options(apsi PUBLIC -D__LINUX__)
-endif()
+# endif()
 
 # Set architecture
+list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_LIST_DIR}/cmake)
 include(DetectArch)
 if(APSI_FOURQ_ARM64)
     # _ARM64_ needs to be set whether the ARM64 optimizations are used
@@ -440,7 +440,7 @@ endif()
 
 if(APSI_BUILD_CLI)
     link_directories(
-        /opt/homebrew/Cellar/flatbuffers/2.0.6/lib
+        /opt/homebrew/Cellar/flatbuffers/2.0.7/lib
         /Users/chb/Projects/deps/APSI/build/lib)
     add_library(common_cli OBJECT)
     add_subdirectory(cli/common)

@@ -28,6 +28,8 @@ extern "C" {
 #define OS_WIN 1
 #define OS_LINUX 2
 
+#define _ARM64_ 1
+
 #if defined(__WINDOWS__) // Microsoft Windows OS
 #define OS_TARGET OS_WIN
 #elif defined(__LINUX__) // Linux OS
@@ -58,7 +60,6 @@ extern "C" {
 #define TARGET_x86 2
 #define TARGET_ARM 3
 #define TARGET_ARM64 4
-#define _AMD64_ 1
 
 #if defined(_AMD64_)
 #define TARGET TARGET_AMD64
